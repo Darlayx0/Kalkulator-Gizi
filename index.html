@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kalkulator Gizi Praktikum</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f9fafb; /* Light gray background */
+        }
+        /* Custom styles untuk font-mono yang lebih rapi */
+        .calc-step {
+            font-family: 'Consolas', 'Monaco', 'monospace';
+            font-size: 0.9em;
+            background-color: #f3f4f6;
+            padding: 12px;
+            border-radius: 6px;
+            color: #1f2937;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        /* Style untuk highlight hasil akhir */
+        .calc-step .font-bold {
+            color: #1d4ed8; /* Blue-700 */
+        }
+        .result-highlight {
+            color: #1d4ed8; /* Blue-700 */
+            font-weight: 700; /* Bold */
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <div id="app" class="min-h-screen px-4 sm:px-8 lg:px-12 py-8">
+        
+        <!-- Header -->
+        <header class="max-w-4xl mx-auto mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-center text-blue-700">Kalkulator Gizi</h1>
+            <p class="text-lg text-center text-gray-600 mt-2">Asisten Laporan Praktikum Gizi Anda</p>
+        </header>
+
+        <!-- Input Form -->
+        <section id="input-section" class="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-lg">
+            <form id="gizi-form">
+                <h2 class="text-2xl font-semibold text-gray-900 mb-6 border-b pb-3">Data Pasien</h2>
+                
+                <!-- Data Subjektif -->
+                <fieldset class="mb-6">
+                    <legend class="text-lg font-medium text-gray-700 mb-3">1. Data Subjektif</legend>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="umur" class="block text-sm font-medium text-gray-700">Umur (Tahun)</label>
+                            <input type="number" id="umur" name="umur" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="Contoh: 20" required>
+                        </div>
+                        <div>
+                            <label for="gender" class="block text-sm font-medium text-gray-700">Jenis Kelamin</label>
+                            <select id="gender" name="gender" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" required>
+                                <option value="">-- Pilih Jenis Kelamin --</option>
+                                <option value="laki-laki">Laki-laki</option>
+                                <option value="perempuan">Perempuan</option>
+                            </select>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <!-- Data Objektif -->
+                <fieldset>
+                    <legend class="text-lg font-medium text-gray-700 mb-3">2. Data Objektif</legend>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="bb" class="block text-sm font-medium text-gray-700">Berat Badan (BB) (kg)</label>
+                            <input type="number" id="bb" name="bb" step="0.01" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="Contoh: 55.5" required>
+                        </div>
+                        <div>
+                            <label for="tb" class="block text-sm font-medium text-gray-700">Tinggi Badan (TB) (cm)</label>
+                            <input type="number" id="tb" name="tb" step="0.01" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="Contoh: 160" required>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <!-- Tombol Hitung -->
+                <div class="mt-8">
+                    <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-lg text-lg font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
+                        Hitung Semua Praktikum
+                    </button>
+                </div>
+            </form>
+            <!-- Pesan Error -->
+            <div id="error-message" class="hidden mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-md"></div>
+        </section>
+
+        <!-- Output Section -->
+        <section id="results-container" class="hidden mt-12">
+            
+            <!-- Hasil Bersama (IMT & KEB) -->
+            <!-- <div id="shared-results" class="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg mb-8">
+                <h2 class="text-2xl font-semibold text-gray-900 mb-6 border-b pb-3">Hasil Perhitungan Dasar</h2>
+                
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3">1. Diagnosis Gizi (IMT)</h3>
+                    <div id="imt-calculation" class="calc-step"></div>
+                    <p id="imt-result" class="mt-2 text-lg font-semibold"></p>
+                </div>
+
+                <div>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3">2. Kebutuhan Energi Basal (KEB/REE)</h3>
+                    <div id="keb-calculation" class="calc-step"></div>
+                    <p id="keb-result" class="mt-2 text-lg font-semibold"></p>
+                </div>
+            </div> -->
+
+            <!-- Hasil per Praktikum -->
+            <div id="practicum-results" class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Hasil akan di-generate oleh JavaScript di sini -->
+            </div>
+
+        </section>
+    </div>
+
+    <script>
+        // Data Praktikum
+        // --- PERUBAHAN DI SINI: Menambahkan Praktikum 5 ---
+        const practicums = [
+            { 
+                name: "1. Diet Lambung", 
+                af: 1.2, 
+                if: 1.3, 
+                macros: { carb: 0.60, protein: 0.15, fat: 0.25 } 
+            },
+            { 
+                name: "2. Diet Rendah Sisa", 
+                af: 1.2, 
+                if: 1.4, 
+                macros: { carb: 0.60, protein: 0.15, fat: 0.25 } 
+            },
+            { 
+                name: "3. Diet Tinggi Serat", 
+                af: 1.3, 
+                if: 1.3, 
+                macros: { carb: 0.60, protein: 0.15, fat: 0.25 } 
+            },
+            { 
+                name: "4. Diet Penyakit Hati", 
+                af: 1.2, 
+                if: 1.4, 
+                macros: { carb: 0.60, protein: 0.15, fat: 0.25 } 
+            },
+            { 
+                name: "5. Diet Rendah Lemak", 
+                af: 1.2, 
+                if: 1.3, 
+                macros: { carb: 0.60, protein: 0.20, fat: 0.20 } 
+            }
+        ];
+
+        // Helper function to format 2 decimal places
+        function formatNum(num) {
+            return num.toFixed(2);
+        }
+
+        // Event listener for form submission
+        document.getElementById('gizi-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            // 1. Get Input Values
+            const umur = parseFloat(document.getElementById('umur').value);
+            const gender = document.getElementById('gender').value;
+            const bb = parseFloat(document.getElementById('bb').value);
+            const tb = parseFloat(document.getElementById('tb').value);
+            const errorMessage = document.getElementById('error-message');
+
+            // 2. Validasi Input
+            if (isNaN(umur) || isNaN(bb) || isNaN(tb) || !gender) {
+                errorMessage.textContent = 'Harap isi semua data dengan angka yang valid.';
+                errorMessage.classList.remove('hidden');
+                return;
+            }
+            errorMessage.classList.add('hidden');
+
+            // 3. Perhitungan Bersama
+            
+            // IMT
+            const tb_m = tb / 100;
+            const imt = bb / (tb_m * tb_m);
+            const imt_calc_string = `IMT = BB / (TB (m))²\nIMT = ${bb} kg / (${tb_m} m)²\nIMT = ${bb} / ${formatNum(tb_m * tb_m)}\nIMT = <span class="font-bold">${formatNum(imt)}</span>`;
+            
+            // Tentukan status gizi berdasarkan IMT (Standar Kemenkes RI)
+            let imt_status = '';
+            if (imt < 17.0) imt_status = 'Sangat Kurus';
+            else if (imt >= 17.0 && imt < 18.5) imt_status = 'Kurus';
+            else if (imt >= 18.5 && imt < 25.1) imt_status = 'Normal';
+            else if (imt >= 25.1 && imt < 27.1) imt_status = 'Gemuk';
+            else imt_status = 'Sangat Gemuk (Obesitas)';
+
+            // KEB
+            let keb = 0;
+            let keb_calc_string = '';
+            if (gender === 'laki-laki') {
+                const val1_l = 13.7 * bb;
+                const val2_l = 5 * tb;
+                const val3_l = 6.8 * umur;
+                const sum_positive_l = 66 + val1_l + val2_l;
+                keb = sum_positive_l - val3_l;
+
+                keb_calc_string = `KEB = 66 + (13,7 x BB) + (5 x TB) - (6,8 x U)\n` +
+                                  `KEB = 66 + (13,7 x ${bb}) + (5 x ${tb}) - (6,8 x ${umur})\n` + // <-- Langkah tambahan yang Anda minta
+                                  `KEB = 66 + (${formatNum(val1_l)}) + (${formatNum(val2_l)}) - (${formatNum(val3_l)})\n` +
+                                  `KEB = (${formatNum(sum_positive_l)}) - ${formatNum(val3_l)}\n` +
+                                  `KEB = <span class="font-bold">${formatNum(keb)} kkal</span>`;
+            } else { // Perempuan
+                const val1_p = 9.6 * bb;
+                const val2_p = 1.8 * tb;
+                const val3_p = 4.7 * umur;
+                const sum_positive_p = 655 + val1_p + val2_p;
+                keb = sum_positive_p - val3_p;
+                
+                keb_calc_string = `KEB = 655 + (9,6 x BB) + (1,8 x TB) – (4,7 x U)\n` +
+                                  `KEB = 655 + (9,6 x ${bb}) + (1,8 x ${tb}) – (4,7 x ${umur})\n` + // <-- Langkah tambahan yang Anda minta
+                                  `KEB = 655 + (${formatNum(val1_p)}) + (${formatNum(val2_p)}) - (${formatNum(val3_p)})\n` +
+                                  `KEB = (${formatNum(sum_positive_p)}) - ${formatNum(val3_p)}\n` +
+                                  `KEB = <span class="font-bold">${formatNum(keb)} kkal</span>`;
+            }
+
+            // 4. Tampilkan Hasil Bersama
+            // document.getElementById('imt-calculation').innerHTML = imt_calc_string; // Use innerHTML
+            // document.getElementById('imt-result').innerHTML = `Status Gizi: <span class="result-highlight">${imt_status}</span>`; // Use innerHTML
+            // document.getElementById('keb-calculation').innerHTML = keb_calc_string; // Use innerHTML
+            // document.getElementById('keb-result').innerHTML = `Hasil KEB: <span class="result-highlight">${formatNum(keb)} kkal</span>`; // Use innerHTML
+
+            // 5. Perhitungan per Praktikum
+            let practicumHtml = '';
+            practicums.forEach(p => {
+                // KET
+                const ket = keb * p.af * p.if;
+                const ket_calc_string = `KET = KEB x AF x IF\nKET = ${formatNum(keb)} x ${p.af} x ${p.if}\nKET = <span class="font-bold">${formatNum(ket)} kkal</span>`;
+                
+                // Makronutrien
+                const carb_g = (p.macros.carb * ket) / 4;
+                const prot_g = (p.macros.protein * ket) / 4;
+                const fat_g = (p.macros.fat * ket) / 9;
+
+                const carb_calc_string = `Karbohidrat = (${p.macros.carb * 100}% x KET) : 4\nKarbohidrat = (${p.macros.carb} x ${formatNum(ket)}) : 4\nKarbohidrat = ${formatNum(p.macros.carb * ket)} : 4\nKarbohidrat = <span class="font-bold">${formatNum(carb_g)} g</span>`;
+                const prot_calc_string = `Protein = (${p.macros.protein * 100}% x KET) : 4\nProtein = (${p.macros.protein} x ${formatNum(ket)}) : 4\nProtein = ${formatNum(p.macros.protein * ket)} : 4\nProtein = <span class="font-bold">${formatNum(prot_g)} g</span>`;
+                const fat_calc_string = `Lemak = (${p.macros.fat * 100}% x KET) : 9\nLemak = (${p.macros.fat} x ${formatNum(ket)}) : 9\nLemak = ${formatNum(p.macros.fat * ket)} : 9\nLemak = <span class="font-bold">${formatNum(fat_g)} g</span>`;
+
+                // Batas Adekuat
+                const carb_min = carb_g - (0.10 * carb_g);
+                const carb_max = carb_g + (0.10 * carb_g);
+                const prot_min = prot_g - (0.10 * prot_g);
+                const prot_max = prot_g + (0.10 * prot_g);
+                const fat_min = fat_g - (0.10 * fat_g);
+                const fat_max = fat_g + (0.10 * fat_g);
+
+                const carb_ba_calc = `Max = ${formatNum(carb_g)} + (10% x ${formatNum(carb_g)}) = ${formatNum(carb_g)} + ${formatNum(0.10 * carb_g)} = <span class="font-bold">${formatNum(carb_max)} g</span>\nMin = ${formatNum(carb_g)} - (10% x ${formatNum(carb_g)}) = ${formatNum(carb_g)} - ${formatNum(0.10 * carb_g)} = <span class="font-bold">${formatNum(carb_min)} g</span>`;
+                const prot_ba_calc = `Max = ${formatNum(prot_g)} + (10% x ${formatNum(prot_g)}) = ${formatNum(prot_g)} + ${formatNum(0.10 * prot_g)} = <span class="font-bold">${formatNum(prot_max)} g</span>\nMin = ${formatNum(prot_g)} - (10% x ${formatNum(prot_g)}) = ${formatNum(prot_g)} - ${formatNum(0.10 * prot_g)} = <span class="font-bold">${formatNum(prot_min)} g</span>`;
+                const fat_ba_calc = `Max = ${formatNum(fat_g)} + (10% x ${formatNum(fat_g)}) = ${formatNum(fat_g)} + ${formatNum(0.10 * fat_g)} = <span class="font-bold">${formatNum(fat_max)} g</span>\nMin = ${formatNum(fat_g)} - (10% x ${formatNum(fat_g)}) = ${formatNum(fat_g)} - ${formatNum(0.10 * fat_g)} = <span class="font-bold">${formatNum(fat_min)} g</span>`;
+
+                // Buat HTML Card
+                practicumHtml += `
+                    <div class="bg-white p-6 rounded-xl shadow-lg">
+                        <h2 class="text-2xl font-bold text-blue-700 mb-4">${p.name}</h2>
+
+                        <!-- Diagnosis Gizi (IMT) -->
+                        <div class="mb-6">
+                            <h3 class="text-xl font-semibold text-gray-800 mb-3">1. Diagnosis Gizi (IMT)</h3>
+                            <div class="calc-step">${imt_calc_string}</div>
+                            <p class="mt-2 text-lg font-semibold">Status Gizi: <span class="result-highlight">${imt_status}</span></p>
+                        </div>
+        
+                        <!-- Kebutuhan Energi Basal (KEB) -->
+                        <div class="mb-6">
+                            <h3 class="text-xl font-semibold text-gray-800 mb-3">2. Kebutuhan Energi Basal (KEB/REE)</h3>
+                            <div class="calc-step">${keb_calc_string}</div>
+                        </div>
+
+                        <div class="mb-4 space-y-1">
+                            <p class="font-medium text-gray-700">Faktor Aktivitas (AF): <span class="result-highlight">${p.af}</span></p>
+                            <p class="font-medium text-gray-700">Faktor Stres (IF): <span class="result-highlight">${p.if}</span></p>
+                        </div>
+
+                        <!-- KET -->
+                        <div class="mb-5">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-2">3. Kebutuhan Energi Total (KET)</h3>
+                            <div class="calc-step">${ket_calc_string}</div>
+                        </div>
+
+                        <!-- Makronutrien -->
+                        <h3 class="text-lg font-semibold text-gray-800 mb-3">4. Kebutuhan Makronutrien</h3>
+                        <div class="space-y-5">
+                            
+                            <!-- Karbohidrat -->
+                            <div>
+                                <h4 class="text-md font-semibold text-gray-700">a. Karbohidrat (${p.macros.carb * 100}%)</h4>
+                                <h5 class="font-medium mt-2 mb-1 text-sm text-gray-600">Proses Perhitungan:</h5>
+                                <div class="calc-step">${carb_calc_string}</div>
+                                <h5 class="font-medium mt-3 mb-1 text-sm text-gray-600">Batas Adekuat:</h5>
+                                <div class="calc-step">${carb_ba_calc}</div>
+                            </div>
+                            
+                            <!-- Protein -->
+                            <div>
+                                <h4 class="text-md font-semibold text-gray-700">b. Protein (${p.macros.protein * 100}%)</h4>
+                                <h5 class="font-medium mt-2 mb-1 text-sm text-gray-600">Proses Perhitungan:</h5>
+                                <div class="calc-step">${prot_calc_string}</div>
+                                <h5 class="font-medium mt-3 mb-1 text-sm text-gray-600">Batas Adekuat:</h5>
+                                <div class="calc-step">${prot_ba_calc}</div>
+                            </div>
+
+                            <!-- Lemak -->
+                            <div>
+                                <h4 class="text-md font-semibold text-gray-700">c. Lemak (${p.macros.fat * 100}%)</h4>
+                                <h5 class="font-medium mt-2 mb-1 text-sm text-gray-600">Proses Perhitungan:</h5>
+                                <div class="calc-step">${fat_calc_string}</div>
+                                <h5 class="font-medium mt-3 mb-1 text-sm text-gray-600">Batas Adekuat:</h5>
+                                <div class="calc-step">${fat_ba_calc}</div>
+                            </div>
+
+                        </div>
+                    </div>
+                `;
+            });
+
+            // 6. Tampilkan Hasil
+            document.getElementById('practicum-results').innerHTML = practicumHtml;
+            document.getElementById('results-container').classList.remove('hidden');
+
+            // Scroll ke hasil
+            document.getElementById('results-container').scrollIntoView({ behavior: 'smooth' });
+        });
+    </script>
+</body>
+</html>
+
+
+
+
+
