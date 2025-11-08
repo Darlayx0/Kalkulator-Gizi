@@ -29,7 +29,8 @@
         /* Memastikan scroll-padding untuk header sticky */
         html {
             /* Tinggi header (h-16 = 4rem) + progress bar (h-1 = 0.25rem) + margin-bottom (mb-8 = 2rem) */
-            scroll-padding-top: calc(4.25rem + 2rem); 
+            /* Kita set scroll-padding-top ke 50% untuk bekerja dengan trigger baru di tengah */
+            scroll-padding-top: 50vh;
         }
 
         /* Style untuk radio button yang dicek */
@@ -236,44 +237,88 @@
             return parseFloat(fixedString);
         }
 
-        // Fungsi untuk setup IntersectionObserver (Scrollspy)
+        // [PERBAIKAN BESAR] Fungsi untuk setup IntersectionObserver (Scrollspy)
         function setupScrollspy() {
             const currentPracticumName = document.getElementById('current-practicum-name');
             const progressBar = document.getElementById('scroll-progress-bar');
+            
+            // [BARU] Peta untuk melacak status 'isIntersecting' setiap bagian
+            const intersectingMap = new Map();
             
             if (observer) {
                 observer.disconnect();
             }
 
+            // Buat daftar semua bagian, termasuk ringkasan
+            const allSections = [
+                { id: "patient-summary-section", name: "Ringkasan Pasien", colorClass: "text-gray-700", bgClass: "bg-gray-700" },
+                ...practicums // ...diikuti oleh semua praktikum
+            ];
+
             const options = {
                 root: null, // Menggunakan viewport
-                rootMargin: "-100px 0px -50% 0px", 
-                threshold: 0 
+                // [UPDATE] Zona trigger: 10% di tengah viewport (45% s/d 55%)
+                rootMargin: "-45% 0px -45% 0px", 
+                threshold: 0 // Trigger segera saat 1px masuk zona
             };
 
             observer = new IntersectionObserver((entries) => {
-                const intersectingEntry = [...entries].reverse().find(e => e.isIntersecting);
+                
+                // 1. Update "world view" (Map) kita berdasarkan semua perubahan
+                entries.forEach(entry => {
+                    intersectingMap.set(entry.target.id, entry.isIntersecting);
+                });
 
-                if (intersectingEntry) {
-                    const practicumId = intersectingEntry.target.id;
-                    const practicum = practicums.find(p => p.id === practicumId);
-                    const practicumIndex = practicums.findIndex(p => p.id === practicumId);
-                    
-                    if (practicum) {
-                        currentPracticumName.textContent = practicum.name;
-                        currentPracticumName.className = `text-lg font-bold ${practicum.colorClass} transition-colors duration-300`;
-                        
-                        const progressPercent = ((practicumIndex + 1) / practicums.length) * 100;
-                        progressBar.style.width = `${progressPercent}%`;
-                        
-                        practicums.forEach(p => progressBar.classList.remove(p.bgClass));
-                        progressBar.classList.add(practicum.bgClass);
+                // 2. Tentukan bagian mana yang aktif
+                let activeSection = null;
+
+                // 3. [UPDATE] Iterasi semua bagian dari ATAS ke BAWAH
+                for (let i = 0; i < allSections.length; i++) {
+                    const section = allSections[i];
+                    if (intersectingMap.get(section.id)) { // Cek status di Map
+                        // Section *pertama* (paling atas di page) yang kita temukan
+                        // adalah yang aktif.
+                        activeSection = section;
+                        break; // Hentikan pencarian
                     }
                 }
+
+                // 4. Fallback: Jika tidak ada yang aktif (misal, scroll di atas ringkasan)
+                if (!activeSection) {
+                    activeSection = allSections[0]; // Default ke ringkasan
+                }
+
+                // 5. Update UI
+                // (Kita cek lagi untuk memastikan activeSection tidak null)
+                if (activeSection) {
+                    // Update nama
+                    currentPracticumName.textContent = activeSection.name;
+                    currentPracticumName.className = `text-lg font-bold ${activeSection.colorClass} transition-colors duration-300`;
+                    
+                    // Update progress bar
+                    const practicumIndex = practicums.findIndex(p => p.id === activeSection.id);
+                    let progressPercent = 0;
+                    
+                    if (practicumIndex > -1) {
+                        progressPercent = ((practicumIndex + 1) / practicums.length) * 100;
+                    }
+
+                    progressBar.style.width = `${progressPercent}%`;
+                    
+                    // Update warna progress bar
+                    allSections.forEach(p => progressBar.classList.remove(p.bgClass));
+                    progressBar.classList.add(activeSection.bgClass);
+                }
+
             }, options);
 
-            const targets = document.querySelectorAll('#practicum-results > div[id^="p"]');
-            targets.forEach(target => observer.observe(target));
+            // Amati semua target, termasuk ringkasan
+            const targets = document.querySelectorAll('#patient-summary-section, #practicum-results > div[id^="p"]');
+            targets.forEach(target => {
+                // [BARU] Inisialisasi map agar semua status awalnya 'false'
+                intersectingMap.set(target.id, false);
+                observer.observe(target);
+            });
         }
 
         
@@ -352,10 +397,11 @@
                 const sum_positive_l = 66 + val1_l + val2_l;
                 keb = sum_positive_l - val3_l;
 
+                // [UPDATE] Tanda kurung dihapus dari angka tunggal
                 keb_calc_string_func = (colorClass) => `KEB = 66 + (13,7 x BB) + (5 x TB) - (6,8 x U)\n` +
                                   `KEB = 66 + (13,7 x ${formatNum(bb)}) + (5 x ${formatNum(tb)}) - (6,8 x ${formatNum(umur)})\n` + 
-                                  `KEB = 66 + (${formatNum(val1_l)}) + (${formatNum(val2_l)}) - (${formatNum(val3_l)})\n` +
-                                  `KEB = (${formatNum(sum_positive_l)}) - ${formatNum(val3_l)}\n` +
+                                  `KEB = 66 + ${formatNum(val1_l)} + ${formatNum(val2_l)} - ${formatNum(val3_l)}\n` +
+                                  `KEB = ${formatNum(sum_positive_l)} - ${formatNum(val3_l)}\n` +
                                   `KEB = <span class="font-bold ${colorClass}">${formatNum(keb)} kkal</span>`;
             } else { // Perempuan
                 const val1_p = 9.6 * bb;
@@ -364,10 +410,11 @@
                 const sum_positive_p = 655 + val1_p + val2_p;
                 keb = sum_positive_p - val3_p;
                 
+                // [UPDATE] Tanda kurung dihapus dari angka tunggal
                 keb_calc_string_func = (colorClass) => `KEB = 655 + (9,6 x BB) + (1,8 x TB) – (4,7 x U)\n` +
                                   `KEB = 655 + (9,6 x ${formatNum(bb)}) + (1,8 x ${formatNum(tb)}) – (4,7 x ${formatNum(umur)})\n` + 
-                                  `KEB = 655 + (${formatNum(val1_p)}) + (${formatNum(val2_p)}) - (${formatNum(val3_p)})\n` +
-                                  `KEB = (${formatNum(sum_positive_p)}) - ${formatNum(val3_p)}\n` +
+                                  `KEB = 655 + ${formatNum(val1_p)} + ${formatNum(val2_p)} - ${formatNum(val3_p)}\n` +
+                                  `KEB = ${formatNum(sum_positive_p)} - ${formatNum(val3_p)}\n` +
                                   `KEB = <span class="font-bold ${colorClass}">${formatNum(keb)} kkal</span>`;
             }
 
@@ -382,7 +429,8 @@
                 const carb_g = (p.macros.carb * ket) / 4;
                 const prot_g = (p.macros.protein * ket) / 4;
                 const fat_g = (p.macros.fat * ket) / 9;
-
+                
+                // (Tanda kurung di sini sudah benar karena mengelompokkan operasi)
                 const carb_calc_string = `Karbohidrat = (${formatNum(p.macros.carb * 100)}% x KET) : 4\nKarbohidrat = (${formatNum(p.macros.carb)} x ${formatNum(ket)}) : 4\nKarbohidrat = ${formatNum(p.macros.carb * ket)} : 4\nKarbohidrat = <span class="font-bold ${p.colorClass}">${formatNum(carb_g)} g</span>`;
                 const prot_calc_string = `Protein = (${formatNum(p.macros.protein * 100)}% x KET) : 4\nProtein = (${formatNum(p.macros.protein)} x ${formatNum(ket)}) : 4\nProtein = ${formatNum(p.macros.protein * ket)} : 4\nProtein = <span class="font-bold ${p.colorClass}">${formatNum(prot_g)} g</span>`;
                 const fat_calc_string = `Lemak = (${formatNum(p.macros.fat * 100)}% x KET) : 9\nLemak = (${formatNum(p.macros.fat)} x ${formatNum(ket)}) : 9\nLemak = ${formatNum(p.macros.fat * ket)} : 9\nLemak = <span class="font-bold ${p.colorClass}">${formatNum(fat_g)} g</span>`;
@@ -399,11 +447,9 @@
                 const prot_10_percent = 0.10 * prot_g;
                 const fat_10_percent = 0.10 * fat_g;
 
-                // [PERUBAHAN] Menghapus langkah ekstra `Var + (0.10 x Var)`
+                // (Tanda kurung di sini sudah benar karena mengelompokkan operasi)
                 const carb_ba_calc = `Max = Karbohidrat + (10% x Karbohidrat)\nMax = ${formatNum(carb_g)} + (0.10 x ${formatNum(carb_g)})\nMax = ${formatNum(carb_g)} + ${formatNum(carb_10_percent)}\nMax = <span class="font-bold ${p.colorClass}">${formatNum(carb_max)} g</span>\n\nMin = Karbohidrat - (10% x Karbohidrat)\nMin = ${formatNum(carb_g)} - (0.10 x ${formatNum(carb_g)})\nMin = ${formatNum(carb_g)} - ${formatNum(carb_10_percent)}\nMin = <span class="font-bold ${p.colorClass}">${formatNum(carb_min)} g</span>`;
-                
                 const prot_ba_calc = `Max = Protein + (10% x Protein)\nMax = ${formatNum(prot_g)} + (0.10 x ${formatNum(prot_g)})\nMax = ${formatNum(prot_g)} + ${formatNum(prot_10_percent)}\nMax = <span class="font-bold ${p.colorClass}">${formatNum(prot_max)} g</span>\n\nMin = Protein - (10% x Protein)\nMin = ${formatNum(prot_g)} - (0.10 x ${formatNum(prot_g)})\nMin = ${formatNum(prot_g)} - ${formatNum(prot_10_percent)}\nMin = <span class="font-bold ${p.colorClass}">${formatNum(prot_min)} g</span>`;
-                
                 const fat_ba_calc = `Max = Lemak + (10% x Lemak)\nMax = ${formatNum(fat_g)} + (0.10 x ${formatNum(fat_g)})\nMax = ${formatNum(fat_g)} + ${formatNum(fat_10_percent)}\nMax = <span class="font-bold ${p.colorClass}">${formatNum(fat_max)} g</span>\n\nMin = Lemak - (10% x Lemak)\nMin = ${formatNum(fat_g)} - (0.10 x ${formatNum(fat_g)})\nMin = ${formatNum(fat_g)} - ${formatNum(fat_10_percent)}\nMin = <span class="font-bold ${p.colorClass}">${formatNum(fat_min)} g</span>`;
 
                 practicumHtml += `
@@ -511,11 +557,16 @@
                 observer.disconnect();
                 observer = null;
             }
+            
+            // 7. Reset header scrollspy ke default
+            document.getElementById('current-practicum-name').textContent = '';
+            document.getElementById('scroll-progress-bar').style.width = '0%';
         });
 
     </script>
 </body>
 </html>
+
 
 
 
